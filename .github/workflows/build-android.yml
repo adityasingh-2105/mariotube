@@ -6,6 +6,9 @@ on:
       - main
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build-apk:
     name: Build MarioTube Android APK
@@ -46,11 +49,24 @@ jobs:
         run: |
           cd android
           ./gradlew assembleDebug --stacktrace
+          cp app/build/outputs/apk/debug/app-debug.apk app/build/outputs/apk/debug/MarioTube.apk
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: MarioTube-Android-APK
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          path: android/app/build/outputs/apk/debug/MarioTube.apk
           if-no-files-found: error
           retention-days: 30
+
+      - name: Publish Direct APK Download Release
+        uses: softprops/action-gh-release@v2
+        if: github.ref == 'refs/heads/main'
+        with:
+          tag_name: v1.0.0
+          name: "MarioTube Android App v1.0.0"
+          body: "Official MarioTube Native Android App APK. Tap to download and install!"
+          files: android/app/build/outputs/apk/debug/MarioTube.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
