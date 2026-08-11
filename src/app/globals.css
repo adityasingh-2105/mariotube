@@ -1,26 +1,206 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap');
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@variant dark (&:where(.dark, .dark *));
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: 'Inter', var(--font-sans);
+  --font-display: 'Plus Jakarta Sans', var(--font-sans);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+
+  --animate-fade-in: fade-in 0.3s ease-out;
+  --animate-slide-up: slide-up 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-scale-in: scale-in 0.2s ease-out;
+  --animate-shimmer: shimmer 2s infinite linear;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slide-up {
+  from { transform: translateY(12px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes scale-in {
+  from { transform: scale(0.97); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+:root {
+  /* Official YouTube UI Theme - Light Mode */
+  --background: oklch(1 0 0); /* Pure White #ffffff */
+  --foreground: oklch(0.12 0 0); /* YouTube Charcoal-Black #0f0f0f */
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.12 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.12 0 0);
+  
+  /* YouTube Red */
+  --primary: oklch(0.63 0.25 25); /* #ff0000 */
+  --primary-foreground: oklch(1 0 0);
+  
+  /* YouTube Light Gray Button Backgrounds */
+  --secondary: oklch(0.95 0 0); /* #f2f2f2 */
+  --secondary-foreground: oklch(0.12 0 0);
+  
+  --muted: oklch(0.96 0 0); /* #f8f8f8 */
+  --muted-foreground: oklch(0.50 0 0); /* #606060 */
+  
+  /* Accent Red */
+  --accent: oklch(0.63 0.25 25);
+  --accent-foreground: oklch(1 0 0);
+  
+  --destructive: oklch(0.58 0.2 25);
+  --destructive-foreground: oklch(0.99 0 0);
+  
+  --border: oklch(0.91 0 0); /* #e5e5e5 */
+  --input: oklch(0.91 0 0);
+  --ring: oklch(0.63 0.25 25);
+  --radius: 0.75rem; /* Round cards, standard YouTube rounding */
+
+  --sidebar: oklch(1 0 0);
+  --sidebar-foreground: oklch(0.12 0 0);
+  --sidebar-primary: oklch(0.63 0.25 25);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.95 0 0);
+  --sidebar-accent-foreground: oklch(0.12 0 0);
+  --sidebar-border: oklch(0.91 0 0);
+  --sidebar-ring: oklch(0.63 0.25 25);
+}
+
+.dark {
+  /* Official YouTube UI Theme - Dark Mode */
+  --background: oklch(0.12 0 0); /* Pitch Black #0f0f0f */
+  --foreground: oklch(0.95 0 0); /* Clean White #f1f1f1 */
+  --card: oklch(0.20 0 0); /* Dark Charcoal #1f1f1f / #212121 */
+  --card-foreground: oklch(0.95 0 0);
+  --popover: oklch(0.20 0 0);
+  --popover-foreground: oklch(0.95 0 0);
+  
+  /* YouTube Red */
+  --primary: oklch(0.63 0.25 25);
+  --primary-foreground: oklch(1 0 0);
+  
+  /* YouTube Dark Button Gray */
+  --secondary: oklch(0.25 0 0); /* #272727 */
+  --secondary-foreground: oklch(0.95 0 0);
+  
+  --muted: oklch(0.16 0 0); /* #161616 */
+  --muted-foreground: oklch(0.65 0 0); /* #aaaaaa */
+  
+  /* Accent Red */
+  --accent: oklch(0.63 0.25 25);
+  --accent-foreground: oklch(1 0 0);
+  
+  --destructive: oklch(0.52 0.22 25);
+  --destructive-foreground: oklch(0.99 0 0);
+  
+  --border: oklch(0.32 0 0); /* #3f3f3f */
+  --input: oklch(0.32 0 0);
+  --ring: oklch(0.63 0.25 25);
+
+  --sidebar: oklch(0.12 0 0);
+  --sidebar-foreground: oklch(0.95 0 0);
+  --sidebar-primary: oklch(0.63 0.25 25);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.25 0 0);
+  --sidebar-accent-foreground: oklch(0.95 0 0);
+  --sidebar-border: oklch(0.32 0 0);
+  --sidebar-ring: oklch(0.63 0.25 25);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground transition-colors duration-300 font-sans;
+  }
+  html {
+    @apply font-sans scroll-smooth;
+  }
+  
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-muted-foreground/20 rounded-full hover:bg-muted-foreground/45 transition-colors duration-150;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Glassmorphism custom classes */
+.glass {
+  @apply backdrop-blur-md bg-background/60 border border-border/50;
+}
+
+.glass-dark {
+  @apply backdrop-blur-md bg-card/45 border border-border/30;
+}
+
+/* Custom premium hover effects */
+.hover-glow {
+  @apply transition-all duration-300 hover:shadow-[0_0_20px_rgba(239,68,68,0.15)] dark:hover:shadow-[0_0_30px_rgba(239,68,68,0.25)];
+}
+
+/* Custom Shimmer Loading */
+.shimmer-bg {
+  background: linear-gradient(90deg, oklch(from var(--muted) l c h) 25%, oklch(from var(--border) l c h) 50%, oklch(from var(--muted) l c h) 75%);
+  background-size: 200% 100%;
+}
+
+/* Hide scrollbar utility */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }

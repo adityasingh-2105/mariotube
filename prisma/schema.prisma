@@ -1,0 +1,254 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  phoneNumber   String?   @unique
+  password      String?
+  otpCode       String?
+  otpExpires    DateTime?
+  image         String?
+
+  accounts      Account[]
+  sessions      Session[]
+  passkeys      Passkey[]
+  playlists     Playlist[]
+  favorites     Favorite[]
+  watchHistory  WatchHistory[]
+  subscriptions Subscription[]
+  comments      Comment[]
+  searchHistory SearchHistory[]
+  userChoices   UserChoice[]
+  preference    UserPreference?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Passkey {
+  id           String   @id @default(cuid())
+  credentialId String   @unique
+  publicKey    String
+  counter      Int      @default(0)
+  deviceType   String?
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Video {
+  id           String   @id @default(cuid())
+  youtubeId    String   @unique
+  title        String
+  description  String?
+  thumbnailUrl String?
+  channelId    String?
+  channelTitle String?
+  duration     String?
+  viewCount    String?
+  likeCount    String?
+  publishedAt  DateTime?
+
+  playlistVideos PlaylistVideo[]
+  favorites      Favorite[]
+  watchHistory   WatchHistory[]
+  comments       Comment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([youtubeId])
+  @@index([channelId])
+}
+
+model Playlist {
+  id          String  @id @default(cuid())
+  name        String
+  description String?
+  isPublic    Boolean @default(true)
+  isSystem    Boolean @default(false)
+  systemType  String?
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  videos PlaylistVideo[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([userId, systemType])
+}
+
+model PlaylistVideo {
+  id         String @id @default(cuid())
+  position   Int    @default(0)
+
+  playlistId String
+  playlist   Playlist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+
+  videoId String
+  video   Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  addedAt DateTime @default(now())
+
+  @@unique([playlistId, videoId])
+  @@index([playlistId])
+}
+
+model Favorite {
+  id String @id @default(cuid())
+
+  userId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  videoId String
+  video   Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, videoId])
+  @@index([userId])
+}
+
+model WatchHistory {
+  id            String  @id @default(cuid())
+  watchDuration Int?
+  completed     Boolean @default(false)
+
+  userId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  videoId String
+  video   Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  watchedAt DateTime @default(now())
+
+  @@index([userId, watchedAt(sort: Desc)])
+  @@index([userId, videoId])
+}
+
+model Subscription {
+  id               String @id @default(cuid())
+  channelYoutubeId String
+  channelTitle     String?
+  channelThumbnail String?
+
+  userId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, channelYoutubeId])
+  @@index([userId])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  videoId   String
+  video     Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  parentId  String?
+  parent    Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   Comment[] @relation("CommentReplies")
+
+  likes     Int       @default(0)
+}
+
+model SearchHistory {
+  id          String   @id @default(cuid())
+  query       String
+  category    String?
+  searchedAt  DateTime @default(now())
+
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, searchedAt(sort: Desc)])
+}
+
+model UserChoice {
+  id          String   @id @default(cuid())
+  action      String   // 'search', 'watch', 'like', 'short_swipe', 'channel_visit', 'category_filter'
+  category    String?  // 'Gaming', 'Music', 'Tech', etc.
+  tag         String?  // topic/keyword
+  videoId     String?
+  channelId   String?
+  duration    Int?     // watch duration in seconds
+  weight      Float    @default(1.0)
+  createdAt   DateTime @default(now())
+
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, action])
+  @@index([userId, category])
+  @@index([userId, createdAt(sort: Desc)])
+}
+
+model UserPreference {
+  id             String   @id @default(cuid())
+  topCategories  String?  // JSON string e.g. ["Gaming", "Technology"]
+  topTags        String?  // JSON string e.g. ["mario kart", "lofi"]
+  autoplayShorts Boolean  @default(true)
+  defaultQuality String   @default("auto")
+  theme          String   @default("system")
+  updatedAt      DateTime @updatedAt
+
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+

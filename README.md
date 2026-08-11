@@ -1,36 +1,85 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ViewTube - Premium YouTube-Powered Streaming Client
 
-## Getting Started
+ViewTube is a modern, production-ready video streaming client built with Next.js 15, React, Tailwind CSS v4, and Shadcn UI. It uses the official YouTube Data API v3 and YouTube IFrame Player API to allow browsing, searching, and organizing YouTube content with an enterprise-grade local database layer for watch history, playlist organization, subscriptions, and favorites.
 
-First, run the development server:
+## 🚀 Key Features
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+* **Secure Authentication**: Official Google OAuth logging using Auth.js (NextAuth v5).
+* **Trending & Dynamic Queries**: Browse trending categories by global regions.
+* **Smart Search**: Search autocomplete matching channels, playlists, and video categories.
+* **Premium Playback**: watch videos in a responsive, high-performance IFrame wrapper.
+* **Custom User Library**: Create custom playlists, maintain watch logs, save watch-later queues, subscribe locally to channels, and mark favorites.
+* **Premium UX System**: OKLCH colors, glassmorphism overlays, custom loading shimmers, and dark/light themes.
+* **Docker Support**: Standalone production image packaging.
+* **100% API Policy Compliant**: Access YouTube strictly via authorized APIs and embedded player bounds without bypassing advertisements or restriction policies.
+
+## 🛠️ Tech Stack
+
+* **Framework**: Next.js 15 (App Router, Server Actions)
+* **Styling**: Tailwind CSS v4, CSS-first design tokens
+* **Components**: Shadcn UI, Lucide icons, Framer Motion
+* **Database**: PostgreSQL 16
+* **ORM**: Prisma Client
+* **Auth**: Auth.js (NextAuth v5) Google OAuth Provider
+* **Query Caching**: TanStack Query (React Query v5)
+
+## 📋 Prerequisites
+
+* **Node.js**: v20 or higher
+* **PostgreSQL**: Local database or cloud provider
+* **Google Cloud Console Project**:
+  * Enable the **YouTube Data API v3**
+  * Generate an **API Key**
+  * Configure an **OAuth client ID (Web Application)** with callback: `http://localhost:3000/api/auth/callback/google`
+
+## ⚙️ Environment Variables
+
+Create a `.env.local` file at the root:
+
+```env
+# Database Connections
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/viewtube?schema=public"
+
+# Auth configurations
+AUTH_SECRET="generate-with-npx-auth-secret"
+AUTH_TRUST_HOST=true
+GOOGLE_CLIENT_ID="your-google-oauth-client-id"
+GOOGLE_CLIENT_SECRET="your-google-oauth-client-secret"
+
+# YouTube Access Key
+YOUTUBE_API_KEY="your-google-youtube-v3-api-key"
+
+# App Deployment URLs
+NEXT_PUBLIC_APP_URL="http://localhost:3000"
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🛠️ Quick Start (Local Development)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. **Install dependencies**:
+   ```bash
+   npm install
+   ```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+2. **Run database migrations**:
+   ```bash
+   npx prisma migrate dev
+   ```
 
-## Learn More
+3. **Start local dev server**:
+   ```bash
+   npm run dev
+   ```
+   Open [http://localhost:3000](http://localhost:3000) inside your browser.
 
-To learn more about Next.js, take a look at the following resources:
+## 🐳 Docker Deployment
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. **Launch stack (Database + stand-alone app)**:
+   Ensure you set `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `YOUTUBE_API_KEY` in your environment or compose parameters, then run:
+   ```bash
+   docker-compose up --build -d
+   ```
+   The application will boot at [http://localhost:3000](http://localhost:3000).
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 📄 License
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+This project is licensed under the MIT License.
