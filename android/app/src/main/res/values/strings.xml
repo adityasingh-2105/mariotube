@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">MarioTube</string>
+    <string name="title_activity_main">MarioTube</string>
+    <string name="package_name">com.aditya.mariotube</string>
+    <string name="custom_url_scheme">com.aditya.mariotube</string>
+</resources>
