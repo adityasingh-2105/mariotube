@@ -12,11 +12,10 @@ function createPrismaClient(): PrismaClient {
 
   // If Turso Cloud database credentials are provided, connect to Turso Edge
   if (tursoUrl && tursoAuthToken) {
-    const libsql = createClient({
+    const adapter = new PrismaLibSql({
       url: tursoUrl,
       authToken: tursoAuthToken,
     });
-    const adapter = new PrismaLibSql(libsql);
     return new PrismaClient({ adapter });
   }
 
