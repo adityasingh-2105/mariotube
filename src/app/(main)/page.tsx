@@ -36,6 +36,8 @@ export default function HomePage() {
   const videos = videosData?.pages.flatMap((page) => page.data?.videos || []) || [];
   const isPersonalized = videosData?.pages[0]?.data?.isPersonalized || false;
 
+  const selectedCategoryName = categories.find((c: any) => c.id === selectedCategoryId)?.title;
+
   return (
     <div className="space-y-6">
       {/* Category Filter Pills */}
@@ -49,9 +51,13 @@ export default function HomePage() {
       <div className="flex items-center gap-3 pb-1">
         <Flame className="h-6 w-6 text-primary fill-primary" />
         <h2 className="font-display font-bold text-2xl text-foreground">
-          Recommended Content
+          {selectedCategoryName ? `${selectedCategoryName} Videos` : "Recommended Content"}
         </h2>
-        {isPersonalized ? (
+        {selectedCategoryName ? (
+          <span className="text-xs bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded-full font-bold">
+            {selectedCategoryName}
+          </span>
+        ) : isPersonalized ? (
           <span className="text-xs bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded-full font-bold">
             Personalized ✨
           </span>

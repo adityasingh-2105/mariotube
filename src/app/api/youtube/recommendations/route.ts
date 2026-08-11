@@ -11,6 +11,23 @@ const schema = z.object({
   maxResults: z.coerce.number().min(1).max(50).default(16),
 });
 
+const CATEGORY_TOPICS: Record<string, string> = {
+  "1": "Film & Animation movie trailers clips animations",
+  "2": "Autos & Vehicles supercars automotive reviews racing",
+  "10": "Trending Music official music videos top hits",
+  "15": "Pets & Animals funny cute dogs cats wildlife",
+  "17": "Sports highlights football basketball match goals",
+  "19": "Travel & Events travel vlog tourism destinations",
+  "20": "Gaming gameplay walkthrough live stream highlights",
+  "22": "People & Blogs popular vloggers lifestyle stories",
+  "23": "Comedy standup funny comedy sketches hilarious moments",
+  "24": "Entertainment trending shows viral clips pop culture",
+  "25": "News & Politics breaking news world updates analysis",
+  "26": "Howto & Style tutorials lifehacks DIY fashion tips",
+  "27": "Education documentary science learning fascinating facts",
+  "28": "Science & Technology latest tech gadgets AI innovation",
+};
+
 // Helper to clean and extract meaningful topic keywords from video titles
 function extractKeywords(title: string): string[] {
   const stopWords = new Set([
@@ -44,61 +61,83 @@ export const GET = withErrorHandling(async (req: Request) => {
   
   let personalizedVideos: VideoItem[] = [];
   let isPersonalized = false;
-  let seedKeywords: string[] = [];
 
-  if (user && user.id) {
-    // 1. Fetch user's Likes (High Weight)
-    const favorites = await db.favorite.findMany({
-      where: { userId: user.id },
-      include: { video: true },
-      orderBy: { createdAt: "desc" },
-      take: 8,
-    });
+  // CASE 1: USER SELECTED A SPECIFIC CATEGORY (e.g. Comedy, Gaming, Music, Sports)
+  if (validated.categoryId) {
+    const catQuery = CATEGORY_TOPICS[validated.categoryId] || `popular category ${validated.categoryId}`;
 
-    // 2. Fetch user's Watch History (Medium-High Weight)
-    const history = await db.watchHistory.findMany({
-      where: { userId: user.id },
-      include: { video: true },
-      orderBy: { watchedAt: "desc" },
-      take: 12,
-    });
+    try {
+      // Fetch trending videos in this category and search targeted keywords in parallel
+      const [catTrending, catSearch] = await Promise.all([
+        getTrendingVideos(
+          validated.regionCode,
+          validated.categoryId,
+          validated.pageToken,
+          validated.maxResults
+        )
+          .then((res) => res.items.map(normalizeVideo))
+          .catch(() => [] as VideoItem[]),
 
-    // 3. Fetch user's Subscriptions
-    const subscriptions = await db.subscription.findMany({
-      where: { userId: user.id },
-      take: 6,
-    });
+        searchVideos(catQuery, validated.pageToken, validated.maxResults)
+          .then((res) => res.items.map(normalizeSearchResult))
+          .catch(() => [] as VideoItem[]),
+      ]);
 
-    // 4. Fetch user's Recent Search History (High Signal)
-    const searches = await db.searchHistory.findMany({
-      where: { userId: user.id },
-      orderBy: { searchedAt: "desc" },
-      take: 8,
-    });
+      // Merge and deduplicate results for this category
+      const combined = [...catTrending, ...catSearch];
+      const seen = new Set<string>();
+      personalizedVideos = combined.filter((v) => {
+        if (!v.id || seen.has(v.id)) return false;
+        seen.add(v.id);
+        return true;
+      });
+    } catch (e) {
+      console.error("Category fetch error:", e);
+    }
+  } 
+  // CASE 2: ALL TAB -> PERSONALIZED FEED FOR LOGGED-IN USERS
+  else if (user && user.id) {
+    const [favorites, history, subscriptions, searches, userChoices] = await Promise.all([
+      db.favorite.findMany({
+        where: { userId: user.id },
+        include: { video: true },
+        orderBy: { createdAt: "desc" },
+        take: 8,
+      }),
+      db.watchHistory.findMany({
+        where: { userId: user.id },
+        include: { video: true },
+        orderBy: { watchedAt: "desc" },
+        take: 12,
+      }),
+      db.subscription.findMany({
+        where: { userId: user.id },
+        take: 6,
+      }),
+      db.searchHistory.findMany({
+        where: { userId: user.id },
+        orderBy: { searchedAt: "desc" },
+        take: 8,
+      }),
+      db.userChoice.findMany({
+        where: { userId: user.id },
+        orderBy: { createdAt: "desc" },
+        take: 10,
+      }),
+    ]);
 
-    // 5. Fetch user's Choice tags and categories
-    const userChoices = await db.userChoice.findMany({
-      where: { userId: user.id },
-      orderBy: { createdAt: "desc" },
-      take: 10,
-    });
-
-    // Collect personalized seed topics
     const seedSet = new Set<string>();
 
-    // Add recent search queries
     searches.forEach((s) => {
       if (s.query) seedSet.add(s.query);
     });
 
-    // Add top choices & categories
     userChoices.forEach((c) => {
       if (c.tag) seedSet.add(c.tag);
       if (c.category) seedSet.add(c.category);
     });
 
-    // Add liked channels & prominent title keywords (highest priority)
-    favorites.forEach(f => {
+    favorites.forEach((f) => {
       if (f.video.channelTitle) seedSet.add(f.video.channelTitle);
       const keywords = extractKeywords(f.video.title);
       if (keywords.length >= 2) {
@@ -108,8 +147,7 @@ export const GET = withErrorHandling(async (req: Request) => {
       }
     });
 
-    // Add watched channels & keywords
-    history.forEach(h => {
+    history.forEach((h) => {
       if (h.video.channelTitle) seedSet.add(h.video.channelTitle);
       const keywords = extractKeywords(h.video.title);
       if (keywords.length >= 2) {
@@ -117,42 +155,36 @@ export const GET = withErrorHandling(async (req: Request) => {
       }
     });
 
-    // Add subscribed channels
-    subscriptions.forEach(s => {
+    subscriptions.forEach((s) => {
       if (s.channelTitle) seedSet.add(s.channelTitle);
     });
 
-    seedKeywords = Array.from(seedSet).filter(Boolean);
+    const seedKeywords = Array.from(seedSet).filter(Boolean);
 
     if (seedKeywords.length > 0) {
       isPersonalized = true;
-      // Randomly pick 2-3 distinct seed topics from user's interests on each refresh
       const chosenSeeds = shuffleArray(seedKeywords).slice(0, 3);
 
       try {
-        // Query search results for each chosen interest seed in parallel
-        const queryPromises = chosenSeeds.map(seed => {
-          const query = validated.categoryId 
-            ? `${seed}` 
-            : seed;
-          return searchVideos(query, validated.pageToken, 6)
-            .then(res => res.items.map(normalizeSearchResult))
-            .catch(() => [] as VideoItem[]);
-        });
+        const queryPromises = chosenSeeds.map((seed) =>
+          searchVideos(seed, validated.pageToken, 6)
+            .then((res) => res.items.map(normalizeSearchResult))
+            .catch(() => [] as VideoItem[])
+        );
 
-        // Also fetch a small batch of trending discovery videos to prevent filter bubbles
         const discoveryPromise = getTrendingVideos(
           validated.regionCode,
-          validated.categoryId,
+          undefined,
           validated.pageToken,
           6
-        ).then(res => res.items.map(normalizeVideo)).catch(() => [] as VideoItem[]);
+        )
+          .then((res) => res.items.map(normalizeVideo))
+          .catch(() => [] as VideoItem[]);
 
         const results = await Promise.all([...queryPromises, discoveryPromise]);
-        
-        // Interleave & merge videos
+
         const merged: VideoItem[] = [];
-        const maxLen = Math.max(...results.map(r => r.length), 0);
+        const maxLen = Math.max(...results.map((r) => r.length), 0);
         for (let i = 0; i < maxLen; i++) {
           for (const list of results) {
             if (list[i]) {
@@ -167,59 +199,48 @@ export const GET = withErrorHandling(async (req: Request) => {
     }
   }
 
-  // If not personalized or empty results, load fresh randomized trending/discovery content
+  // CASE 3: FALLBACK TO FRESH DISCOVERY IF STILL EMPTY
   if (personalizedVideos.length === 0) {
     try {
-      if (validated.categoryId) {
-        // If category is selected, fetch category trending
-        const response = await getTrendingVideos(
-          validated.regionCode,
-          validated.categoryId,
-          validated.pageToken,
-          validated.maxResults
-        );
-        personalizedVideos = response.items.map(normalizeVideo);
-      } else {
-        // Fresh diverse discovery across multiple popular genres
-        const discoveryTopics = shuffleArray([
-          "popular music trending",
-          "trending gaming videos",
-          "technology gadgets reviews",
-          "popular comedy viral",
-          "world sports highlights",
-          "fascinating science facts",
-          "latest movies entertainment"
-        ]);
+      const discoveryTopics = shuffleArray([
+        "popular music trending",
+        "trending gaming videos",
+        "technology gadgets reviews",
+        "popular comedy viral",
+        "world sports highlights",
+        "fascinating science facts",
+        "latest movies entertainment",
+      ]);
 
-        const selectedTopic = discoveryTopics[0];
-        
-        const [searchRes, trendingRes] = await Promise.all([
-          searchVideos(selectedTopic, validated.pageToken, 8).then(r => r.items.map(normalizeSearchResult)).catch(() => [] as VideoItem[]),
-          getTrendingVideos(validated.regionCode, undefined, validated.pageToken, 8).then(r => r.items.map(normalizeVideo)).catch(() => [] as VideoItem[]),
-        ]);
+      const selectedTopic = discoveryTopics[0];
 
-        // Interleave discovery search + trending
-        const combined: VideoItem[] = [];
-        const maxLen = Math.max(searchRes.length, trendingRes.length);
-        for (let i = 0; i < maxLen; i++) {
-          if (trendingRes[i]) combined.push(trendingRes[i]);
-          if (searchRes[i]) combined.push(searchRes[i]);
-        }
-        personalizedVideos = combined;
-      }
+      const [searchRes, trendingRes] = await Promise.all([
+        searchVideos(selectedTopic, validated.pageToken, 8)
+          .then((r) => r.items.map(normalizeSearchResult))
+          .catch(() => [] as VideoItem[]),
+        getTrendingVideos(validated.regionCode, undefined, validated.pageToken, 8)
+          .then((r) => r.items.map(normalizeVideo))
+          .catch(() => [] as VideoItem[]),
+      ]);
+
+      const combined = [...trendingRes, ...searchRes];
+      personalizedVideos = shuffleArray(combined);
     } catch (e) {
-      console.error("Discovery trending error:", e);
+      console.error("Fallback recommendations error:", e);
     }
   }
 
-  // Deduplicate by ID and shuffle slightly for natural feed diversity
-  const uniqueVideos = Array.from(new Map(personalizedVideos.map(v => [v.id, v])).values());
-  const finalVideos = shuffleArray(uniqueVideos).slice(0, validated.maxResults);
+  // Final deduplication & format response
+  const seenIds = new Set<string>();
+  const uniqueVideos = personalizedVideos.filter((v) => {
+    if (!v.id || seenIds.has(v.id)) return false;
+    seenIds.add(v.id);
+    return true;
+  });
 
   return successResponse({
-    videos: finalVideos,
+    videos: uniqueVideos.slice(0, validated.maxResults),
     nextPageToken: `page_${Date.now()}`,
     isPersonalized,
-    seedKeywords: seedKeywords.slice(0, 3),
   });
 });
