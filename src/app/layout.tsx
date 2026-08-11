@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/providers/theme-provider";
@@ -6,6 +6,7 @@ import { QueryProvider } from "@/components/providers/query-provider";
 import { SessionProvider } from "@/components/providers/session-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
+import { PWAInstallPrompt } from "@/components/pwa-install-prompt";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -17,12 +18,31 @@ const plusJakartaSans = Plus_Jakarta_Sans({
   variable: "--font-display",
 });
 
+export const viewport: Viewport = {
+  themeColor: "#09090b",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: "cover",
+};
+
 export const metadata: Metadata = {
   title: {
     default: "MarioTube - Premium Video Streaming",
     template: "%s | MarioTube",
   },
   description: "A premium video streaming application built on official YouTube APIs with watch history, playlists, search, subscriptions and favorites.",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "MarioTube",
+  },
+  icons: {
+    icon: "/icon.svg",
+    apple: "/icon.svg",
+  },
   keywords: ["video streaming", "youtube player", "watch history", "favorites", "subscriptions", "mariotube"],
   authors: [{ name: "MarioTube Team" }],
   creator: "MarioTube",
@@ -68,6 +88,7 @@ export default function RootLayout({
             <QueryProvider>
               <TooltipProvider>
                 {children}
+                <PWAInstallPrompt />
                 <Toaster closeButton position="top-right" richColors />
               </TooltipProvider>
             </QueryProvider>
